@@ -1,0 +1,475 @@
+<!DOCTYPE html>
+<html lang="en" >
+<head>
+  <meta charset="UTF-8">
+  <title>CodePen - calcula tu retiro</title>
+  
+
+</head>
+<body>
+<!-- partial:index.partial.html -->
+<link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+<script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.16.0/umd/popper.min.js"></script>
+<script src="https://cdn.jsdelivr.net/gh/linways/table-to-excel@v1.0.4/dist/tableToExcel.js"></script>
+<script src="https://maxcdn.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@2.9.3/dist/Chart.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@0.7.0/dist/chartjs-plugin-datalabels.min.js"></script>
+
+    <div id="compound_interest" style="padding-top: 10px;">
+        <center><h2>Interés Compuesto</h2></center>
+        <div class="container">
+            <div class="row" style="padding-top: 10px;">
+                <div class="col">
+                    <label for="num_years1">Años de inversión:(Minimo 10 años)</label>
+                </div>
+                <div class="col">
+                    <label for="annual_return1">Interés anual:promedio (10% a 12%)</label>
+                </div>
+            </div>
+            <div class="row">
+                <div class="col">
+                    <input type="number" id="num_years1" name="num_years1" min="0" step="1" value="25" oninput="calculate_compound_interest()" class="form-control" style="border-radius: 10px; border: 1px solid #05668D; background-color: white;">
+                </div>
+                <div class="col">
+                    <input type="text" id="annual_return1" name="annual_return1" value="12%" onfocus="this.value = this.value.replace(/,/g, '').replace(/%/g, '')" oninput="this.value = change_percentage(this.value);" onblur="calculate_compound_interest();" class="form-control" style="border-radius: 10px; border: 1px solid #05668D; background-color: white;">
+                </div>
+
+            </div>
+            <div class="row" style="padding-top: 10px;">
+                <div class="col">
+                    <label for="starting_balance">Capital inicial:</label>
+                </div>
+                <div class="col">
+                    <label for="monthly_investment1">Inversión anual:(Minimo a $2000mxn)</label>
+                </div>
+            </div>
+            <div class="row">
+                <div class="col">
+                    <input type="text" id="starting_balance" name="starting_balance" value="$0" onfocus="this.value = this.value.replace(/,/g, '').replace(/%/g, '')" oninput="this.value = change_percentage(this.value);" onblur="calculate_compound_interest();" class="form-control" style="border-radius: 10px; border: 1px solid #05668D; background-color: white;">
+                </div>
+                <div class="col">
+                    <input type="text" id="monthly_investment1" name="monthly_investment1" value="$2000 " onfocus="this.value = this.value.replace(/,/g, '').replace(/\$/g, '')" oninput="this.value = change_cash(this.value);" onblur="calculate_compound_interest();" class="form-control" style="border-radius: 10px; border: 1px solid #05668D; background-color: white;">
+                </div>
+            </div>
+            <div  style="padding-top: 20px; margin: auto; width: 320px;">
+                <center>
+                    <h4>Resultados</h4>
+                    <p style="font-size: 18px; font-weight: bold; color: #05668D; text-align: left;">
+                        Inversión Total: <span id="my_total_invested" style="display: block; background-color: #00a896; color: white; padding-left: 3px; padding-right: 3px; text-align: right; float: right;"></span><br>
+                        Interés ganado: <span id="my_total_return" style="display: block; background-color: #00a896; color: white; padding-left: 3px; padding-right: 3px; text-align: right; float: right;"></span><br>
+                        Capital Total: <span id="my_end_balance" style="display: block; background-color: #00a896; color: white; padding-left: 3px; padding-right: 3px; text-align: right; float: right;"></span>
+                    </p>
+                </center>
+            </div>
+            <div class="chart-container" style="position: relative; width: 100%">
+                <canvas id="myChart1"></canvas>
+            </div>
+            <center>
+                <div class="btn" style="padding-top: 20px; padding-bottom: 10px;">
+                    <button id="table_toggle" type="button" class="btn btn-info"  style="width: 130px; background-color: #05668D; border: 1px solid  black;" onclick="table_toggle()">Tabla +</button>
+                </div>
+                <div class="btn" style="padding-top: 20px; padding-bottom: 10px;">
+                    <button id="btnExport" type="button" class="btn btn-info"  style="width: 130px; background-color: #05668D; border: 1px solid  black;" onclick="exportReportToExcel()">Excel</button>
+                </div>
+            </center>        
+	        <center>
+                <div id="change_table" class="col-md-4" style="display:none; padding-top: 10px; font-size: 14px;"></div>
+            </center>
+        </div>
+    </div>
+    
+<script>
+function exportReportToExcel() {
+  let table = document.getElementsByTagName("table"); // you can use document.getElementById('tableId') as well by providing id to the table tag
+  TableToExcel.convert(table[0], { // html code may contain multiple tables so here we are refering to 1st table tag
+    name: `Networthplan.xlsx`, // fileName you could use any name
+    sheet: {
+      name: 'Planderetiro' // sheetName
+    }
+  });
+}
+
+//Show Table for Saving vs Investing
+    function table_toggle() {
+        var x1 = document.getElementById("change_table");
+        if (x1.style.display === "none") {
+            x1.style.display = "block";
+            document.getElementById('table_toggle').innerHTML   = 'Ocultar -'
+        } else {
+            x1.style.display = "none";
+            document.getElementById('table_toggle').innerHTML   = 'Mostrar +'
+        }
+    }
+    
+function money_to_k(money) {
+    money = money;
+    return money.toFixed(0);
+}
+
+function money_to_k2(money) {
+    money = money / 1000;
+    return Number(money.toFixed(0));
+}
+
+var mixedChart;
+
+function round5(x){
+    return Math.floor(x/5)*5;
+}
+
+function change_percentage(percentage) {
+    percentage = percentage.replace(/%/g, '');
+    percentage = percentage.replace(/,/g, '');
+    if (percentage.indexOf(".") >= 0) {
+        var decimal_pos = percentage.indexOf(".");
+        var left_side = percentage.substring(0, decimal_pos);
+        var right_side = percentage.substring(decimal_pos);
+        right_side = right_side.replace(/\./g, "");
+        left_side = formatNumber(left_side);
+        right_side = formatNumber(right_side);
+        right_side = right_side.substring(0, 1);
+        percentage = left_side + "." + right_side;
+    }
+    else {
+        percentage = formatNumber(percentage);
+    }
+    return percentage;
+}
+
+function change_percentage2(percentage) {
+    percentage = percentage.replace(/%/g, '');
+    percentage = percentage.replace(/,/g, '');
+    if (percentage.indexOf(".") >= 0) {
+        var decimal_pos = percentage.indexOf(".");
+        var left_side = percentage.substring(0, decimal_pos);
+        var right_side = percentage.substring(decimal_pos);
+        right_side = right_side.replace(/\./g, "");
+        left_side = formatNumber(left_side);
+        right_side = formatNumber(right_side);
+        right_side = right_side.substring(0, 1);
+        percentage = left_side + "." + right_side + "%";
+    }
+    else {
+        percentage = formatNumber(percentage) + ".0%";
+    }
+    return percentage;
+}
+
+
+function change_percentage3a(percentage) {
+    percentage = percentage.replace(/%/g, '');
+    percentage = percentage.replace(/,/g, '');
+    if (percentage.indexOf(".") >= 0) {
+        var decimal_pos = percentage.indexOf(".");
+        var left_side = percentage.substring(0, decimal_pos);
+        var right_side = percentage.substring(decimal_pos);
+        right_side = right_side.replace(/\./g, "");
+        left_side = formatNumber(left_side);
+        right_side = formatNumber(right_side);
+        right_side = right_side.substring(0, 2);
+        percentage = left_side + "." + right_side;
+    }
+    else {
+        percentage = formatNumber(percentage);
+    }
+    return percentage;
+}
+    
+function change_percentage3b(percentage) {
+    percentage = percentage.replace(/%/g, '');
+    percentage = percentage.replace(/,/g, '');
+    if (percentage.indexOf(".") >= 0) {
+        var decimal_pos = percentage.indexOf(".");
+        var left_side = percentage.substring(0, decimal_pos);
+        var right_side = percentage.substring(decimal_pos);
+        right_side = right_side.replace(/\./g, "");
+        left_side = formatNumber(left_side);
+        right_side = formatNumber(right_side);
+        right_side = right_side.substring(0, 2);
+        percentage = left_side + "." + right_side + "%";
+    }
+    else {
+        percentage = formatNumber(percentage) + ".0%";
+    }
+    return percentage;
+}
+
+function change_percentage4(percentage) {
+    percentage = percentage.replace(/%/g, '');
+    percentage = percentage.replace(/,/g, '');
+    if (percentage.indexOf(".") >= 0) {
+        var decimal_pos = percentage.indexOf(".");
+        var left_side = percentage.substring(0, decimal_pos);
+        var right_side = percentage.substring(decimal_pos);
+        right_side = right_side.replace(/\./g, "");
+        left_side = formatNumber(left_side);
+        right_side = formatNumber(right_side);
+        right_side = right_side.substring(0, 1);
+        percentage = left_side + "." + right_side + "%";
+    }
+    else {
+        percentage = formatNumber(percentage) + "%";
+    }
+    return percentage;
+}
+
+function change_cash(money) {
+    money = money.replace(/[^\d.-]/g, '');
+    if (money.indexOf(".") >= 0) {
+        var decimal_pos = money.indexOf(".");
+        var left_side = money.substring(0, decimal_pos);
+        var right_side = money.substring(decimal_pos);
+        right_side = right_side.replace(/\./g, "");
+        left_side = formatNumber(left_side);
+        right_side = formatNumber(right_side);
+        right_side = right_side.substring(0, 2);
+        money = left_side + "." + right_side;
+    }
+    else {
+        money = formatNumber(money);
+    }
+    return money;
+}
+
+function change_cash2(money) {
+    money = money.replace(/[^\d.-]/g, '');
+    if (money.indexOf(".") >= 0) {
+        var decimal_pos = money.indexOf(".");
+        var left_side = money.substring(0, decimal_pos);
+        var right_side = money.substring(decimal_pos);
+        right_side = right_side.replace(/\./g, "");
+        left_side = formatNumber(left_side);
+        right_side = formatNumber(right_side);
+        right_side = right_side.substring(0, 2);
+        money = "$" + left_side;
+    }
+    else {
+        money = "$" + formatNumber(money); //+ ;
+    }
+    return money;
+}
+
+function formatNumber(n) {
+    return n.replace(/\D/g, "").replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+}
+
+function change_age(age) {
+    age = age.replace(/[^\d.-]/g, '');
+    if (age.indexOf(".") >= 0) {
+        var decimal_pos = age.indexOf(".");
+        var left_side = age.substring(0, decimal_pos);
+        age = left_side;
+    }
+    return age;
+}
+
+function PMT(rate, nperiod, pv, fv, type) {
+    if (!fv) fv = 0;
+    if (!type) type = 0;
+    if (rate == 0) return -(pv + fv)/nperiod;
+        var pvif = Math.pow(1 + rate, nperiod);
+        var pmt = rate / (pvif - 1) * -(pv * pvif + fv);
+    
+    if (type == 1) {
+        pmt /= (1 + rate);
+    };
+    return pmt;
+}
+
+function NPER(rate, payment, present, future, type) {
+  var type = (typeof type === 'undefined') ? 0 : type;
+  var future = (typeof future === 'undefined') ? 0 : future;
+  rate = eval(rate);
+  var num = payment * (1 + rate * type) - future * rate;
+  var den = (present * rate + payment * (1 + rate * type));
+  return Math.round(Math.log(num / den) / Math.log(1 + rate));  //This is what you use. Surely Math.ceil would be more accurate then math.round?
+}
+    
+//Calculate the Compound Interest For Your Investment Scenario
+    function calculate_compound_interest() {
+
+        var annual_return = Number(document.getElementById("annual_return1").value.replace(/[^\d.-]/g, '')) / 100;
+        var starting_balance = Number(document.getElementById("starting_balance").value.replace(/[^\d.-]/g, ''));
+        document.getElementById("monthly_investment1").value = change_cash2(document.getElementById("monthly_investment1").value);
+        
+        var starting_capital = starting_balance;
+        var monthly_investment = Number(document.getElementById("monthly_investment1").value.replace(/[^\d.-]/g, ''));
+        var current_age = 0;
+        var retirement_age = 1000000;
+        var death_age = current_age + Number(document.getElementById("num_years1").value);
+        
+        var age_list = [];
+        var invested_list = [];
+        var value_list = [];
+        var money_list = [];
+        
+        var i;
+        var year;
+        var start_balance;
+        var money_return;
+        var value;
+        var invested;
+        var invested_month;
+        var value_list_graph = [];
+        var invested_list_graph = [];
+        var total_invested_graph = 0;
+
+        var table = "<table style='width:85%'  class=table table-sm'>" +
+        	"<tr>" +
+            "<th style='background-color: #05668D; text-align:center; color: white;'>Año</th>" +
+            "<th style='background-color: #05668D; text-align:center; color: white;'>Invertido</th>" +
+        	"<th style='background-color: #05668D; text-align:center; color: white;'>Interés</th>" +
+        	"<th style='background-color: #05668D; text-align:center; color: white;'>Capital total</th>" +
+            "</tr>";
+        
+        for (i=current_age; i<death_age; i++){
+            var yearly_investment = 0;
+            for (month=1; month<13; month++) {
+                if (month == 2 && i == death_age) {
+                    break
+                }
+                
+                year = i-current_age
+                
+                if (year == 0 && month == 1) {
+                    start_balance = starting_capital;
+                }
+                else {
+                    start_balance = value;
+                }
+                
+                money_return = start_balance * annual_return / 12;
+                value = money_return + start_balance;
+                
+                if (i < retirement_age) {
+                    invested = (year+1)*monthly_investment+starting_capital;
+                    value += monthly_investment;
+                    invested_month = monthly_investment;
+                }
+                else {
+                    invested_month = 0;
+                }
+                
+                yearly_investment += invested_month;
+                value_list.push(money_to_k(value));
+                invested_list.push(money_to_k(invested + starting_capital));
+                money_list.push(money_return);
+            }
+            
+            age_list.push(i);
+            value_list_graph.push(money_to_k(value));
+          
+          if (i == 0) {
+            total_invested_graph += yearly_investment + starting_capital;
+          } 
+          else {
+            total_invested_graph += yearly_investment;
+          }
+
+            my_return = value - total_invested_graph;
+            invested_list_graph.push(money_to_k(total_invested_graph));
+        
+        var x = i + 1;
+        
+            table += "<tr>" +
+    		"<th style='text-align:center;'>" + x + "</th>" +
+    		"<th style='text-align:center;'>$" +(Math.round(total_invested_graph)).toLocaleString('en') + "</th>" +
+    		"<th style='text-align:center;'>$" +(Math.round(my_return)).toLocaleString('en') +     		
+    		"<th style='text-align:center;'>$" +(Math.round(value)).toLocaleString('en') + 
+    		"</th>";
+        }
+        
+        table += "</table>"
+    	document.getElementById("change_table").innerHTML = table;
+        
+        var ci_array = value_list;
+        var ending_balance = ci_array[ci_array.length -1];
+        var total_vested = monthly_investment * 12 * (death_age - current_age);
+        var tot_array = invested_list_graph;
+        var my_total = tot_array[tot_array.length -1];
+        var my_return = ending_balance - my_total;
+        
+       document.getElementById("my_total_invested").innerHTML = "$" + (Math.round(100*my_total)/100).toLocaleString('en');
+       document.getElementById("my_total_return").innerHTML = "$" + (Math.round(100*my_return)/100).toLocaleString('en');
+       document.getElementById("my_end_balance").innerHTML = "$" + (Math.round(ending_balance)).toLocaleString('en');
+
+        if (typeof mixedChart !== 'undefined') {
+            mixedChart.destroy();
+        }
+        var ctx1 = document.getElementById('myChart1');
+        var isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+    
+        if (isMobile == true) {
+            ctx1.height = 225;
+        }
+        else {
+            ctx1.height = 90;
+        }
+        
+        mixedChart = new Chart(ctx1, {
+            type: 'bar',
+            data: {
+                datasets: [{
+                    label: 'Inversión',
+                    data: invested_list_graph,
+                    type: 'bar',
+                    backgroundColor: 'rgb(2,195,154)',
+                    order: 2,
+                }, 
+                {
+                    label: 'Capital Total',
+                    data: value_list_graph,
+                    type: 'bar',
+                    backgroundColor: 'rgb(5,102,141)',
+                    order: 1,
+                }],
+                labels: age_list //Removing last element
+            },
+            options: {
+                plugins: {
+                    datalabels: {
+                        anchor :'end',
+                        align :'top',
+                        // and if you need to format how the value is displayed...
+                        formatter: function(value, context) {
+                            return "";
+                        }
+                    }
+                },      
+                legend: {
+                    display: true,
+                    labels: {
+                        fontColor: 'rgb(0,0,0)'
+                    }
+                },
+                scales: {
+                    yAxes: [{
+                        type: 'linear',
+                        position: 'left',
+                        scaleLabel: {
+                            labelString: "Capital Final/Inversión",
+                            display: true
+                        },
+                        ticks: {
+                            suggestedMin: 0,
+                            callback: function(value, index, values) {
+                                return change_cash2(String(value/1000)) + 'k';
+                            }
+                        }
+                    }]
+                },
+                title: {
+                    display: true,
+                    text: ''
+                }
+            }
+        });
+    }
+    
+calculate_compound_interest();
+</script>
+<!-- partial -->
+  
+</body>
+</html>
